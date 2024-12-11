@@ -1,25 +1,43 @@
-name: Nexus Script Runner
+name: Nexus Prover Automation
 
 on:
+  push:
+    branches:
+      - main
   schedule:
-    # Run once a day at midnight (adjust timing as needed)
-    - cron: "0 0 * * *"
-
-  workflow_dispatch: # Allows manual triggering.
+    - cron: '*/15 * * * *' # Runs every 15 minutes (adjust as needed)
 
 jobs:
-  run-nexus:
+  run-nexus-prover:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Update and Install curl
-      run: |
-        sudo apt update
-        sudo apt install -y curl
+      # Step 1: Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Fetch and Run Nexus Script
-      run: |
-        if [ -f "nexus.sh" ]; then
-          rm nexus.sh
-        fi
-        curl -sSL https://raw.githubusercontent.com/zunxbt/nexus-prover/main/nexus.sh | bash
+      # Step 2: Install required tools and dependencies
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y curl wget
+
+      # Step 3: Download and Run Nexus Prover Script
+      - name: Download Nexus Script
+        run: |
+          [ -f "nexus.sh" ] && rm nexus.sh
+          curl -sSL https://raw.githubusercontent.com/zunxbt/nexus-prover/main/nexus.sh -o nexus.sh
+          bash nexus.sh
+
+      # Step 4: Configure Prover ID
+      - name: Configure Prover ID
+        run: |
+          mkdir -p ~/.nexus
+          echo "ZEUDQ1MD" > ~/.nexus/prover-id
+          sudo systemctl restart nexus.service
+
+      # Step 5: Verify Status
+      - name: Verify Prover Status
+        run: |
+          systemctl status nexus.service
+          journalctl -u nexus.service -n 50
